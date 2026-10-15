@@ -93,3 +93,21 @@ suite "stripFormatting":
     check stripFormatting("\x034, and more") == ", and more"
   test "hex colour":
     check stripFormatting("\x04FF0000red") == "red"
+
+import nirc/trace
+
+suite "a trace hides secrets":
+  test "PASS and a SASL payload":
+    check redact("PASS :hunter2") == "PASS ***"
+    check redact("AUTHENTICATE PLAIN") == "AUTHENTICATE PLAIN"
+    check redact("AUTHENTICATE +") == "AUTHENTICATE +"
+    check redact("AUTHENTICATE Ym9iAGJvYgBzZWtyaXQ=") == "AUTHENTICATE ***"
+  test "OPER and NickServ typed by hand":
+    check redact("OPER admin s3cret") == "OPER admin ***"
+    check redact("PRIVMSG NickServ :IDENTIFY bob pw") ==
+      "PRIVMSG NickServ :IDENTIFY ***"
+    check redact("NICKSERV identify pw") == "NICKSERV identify ***"
+  test "everything else as it was":
+    check redact("PRIVMSG #nim :my password is not here") ==
+      "PRIVMSG #nim :my password is not here"
+    check redact("NICK bob") == "NICK bob"

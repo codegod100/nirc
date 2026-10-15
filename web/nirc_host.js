@@ -17,6 +17,23 @@
   var ws = null;
   var wantedNow = "";
 
+  // Verbose logging: every IRC line in and out, to the console. On with
+  // `?trace` in the page's URL, which is remembered, or `nirc.trace(true)` in
+  // the console; `?trace=0` turns it off again.
+  (function () {
+    var on = false;
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.has("trace")) {
+        on = q.get("trace") !== "0";
+        localStorage.setItem("nirc.trace", on ? "1" : "0");
+      } else {
+        on = localStorage.getItem("nirc.trace") === "1";
+      }
+    } catch (e) {}
+    if (on && globalThis.nirc && globalThis.nirc.trace) globalThis.nirc.trace(true);
+  })();
+
   // The server field holds a WebSocket URL. A bare host is taken as
   // wss://host:port/ (or ws:// with TLS off), which is where most ircds put
   // their WebSocket listener.

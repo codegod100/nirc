@@ -38,6 +38,31 @@ proc trace*(topic: string, msg: string) =
   # is worth nothing, and the process dying is the case most worth tracing.
   when not defined(js): stderr.flushFile()
 
+func redact*(line: string): string =
+  ## An outgoing line as the trace shows it: a secret in it starred out, so a
+  ## trace can be pasted into a bug report. PASS, a SASL payload, OPER, and a
+  ## NickServ IDENTIFY or REGISTER typed in by hand.
+  let up = line.toUpperAscii
+  if up.startsWith("PASS "):
+    return "PASS ***"
+  if up.startsWith("AUTHENTICATE "):
+    let arg = line[13 .. ^1]
+    # The mechanism name and the bare `+`/`*` are not secrets; anything else
+    # is the base64 of the password.
+    if arg in ["+", "*"] or arg.allCharsInSet({'A'..'Z', '-', '_', '0'..'9'}):
+      return line
+    return "AUTHENTICATE ***"
+  if up.startsWith("OPER "):
+    let parts = line.splitWhitespace
+    return "OPER " & (if parts.len > 1: parts[1] else: "") & " ***"
+  for svc in ["NICKSERV ", "PRIVMSG NICKSERV :", "NS "]:
+    if up.startsWith(svc):
+      let rest = up[svc.len .. ^1]
+      for verb in ["IDENTIFY", "REGISTER", "GHOST", "RECOVER"]:
+        if rest.startsWith(verb):
+          return line[0 ..< svc.len + verb.len] & " ***"
+  line
+
 template traced*(topic: string, body: untyped) =
   ## For a message that costs something to build. The body is not evaluated
   ## at all when tracing is off.

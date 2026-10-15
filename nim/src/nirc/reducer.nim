@@ -62,7 +62,7 @@ proc rememberRooms(force = false)
   ## ordered by what the reader does, not by what calls what.
 
 proc send(line: string) =
-  trace("out", line)
+  traced("out"): redact(line)
   tr.send(line)
 
 proc openRoom(name: string) =
@@ -751,6 +751,7 @@ proc drain*() =
   while true:
     let (ok, line) = tr.tryLine()
     if not ok: break
+    trace("in", line)
     # A multiline batch is held until it closes and comes out as one
     # message; at most one line comes out of any line that goes in.
     let whole = multilines.feed(parseLine(line))

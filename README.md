@@ -43,7 +43,7 @@ silicon yet.
 A few switches for the desktop:
 
 ```bash
-NIRC_TRACE=1 pixi run desktop        # every line in and out
+NIRC_TRACE=1 pixi run desktop        # verbose: every IRC line in and out
 NIRC_DEMO=1 pixi run desktop         # open on a representative room, no server
 NIRC_THEME=light pixi run desktop    # or dark; otherwise the desktop's own
 
@@ -52,6 +52,21 @@ NIRC_AUTOCONNECT=1 NIRC_HOST=irc.libera.chat NIRC_NICK=me \
   NIRC_CHANNELS="#nim" pixi run desktop
 # NIRC_PORT=6667 NIRC_TLS=0 for a plain listener
 ```
+
+### Verbose logging
+
+`NIRC_TRACE=1` logs every IRC line sent and received to stderr, with a
+timestamp, plus connection, sign-in and storage events. Passwords are
+starred out (`PASS`, SASL payloads, `OPER`, NickServ `IDENTIFY`), so a trace
+is safe to paste into a bug report.
+
+```
+[nirc 23:39:03.007] out       CAP LS 302
+[nirc 23:39:03.215] in        :ergo.test 001 tracey :Welcome to the ErgoTest IRC Network tracey
+```
+
+In the web build, open the page with `?trace` (remembered until `?trace=0`)
+or run `nirc.trace(true)` in the browser console; the lines go to the console.
 
 ## Connecting
 
