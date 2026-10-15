@@ -8,17 +8,20 @@ media and preview endpoints) taken out and standard IRC put in their place.
 
 ## The toolchain
 
-There is no nix in the build. `tools/toolchain.sh` fetches Nim as a
-sha256-pinned tarball into `.toolchain/`, and every `just` recipe runs inside
-the environment that script prints. The host brings a C compiler, OpenSSL,
-curl, tar and python3 — GTK 3 and pkg-config for the desktop, and node for
-`just test web`.
+[pixi](https://pixi.sh) is the whole toolchain. `pixi.toml` lists Nim, the C
+compiler, OpenSSL, GTK 3, pkg-config, node and python from conda-forge, and
+`pixi.lock` pins them; nothing comes from the host but pixi. The tasks call
+`tools/nirc.sh`, which holds the build, run and test steps.
 
 ```bash
-just test nim        # the core, in seconds: no GTK, no browser
-just test web        # the JavaScript build of the same core, under node
-just test desktop    # the GTK app compiled
+pixi run test nim        # the core, in seconds: no GTK, no browser
+pixi run test web        # the JavaScript build of the same core, under node
+pixi run test desktop    # the GTK app compiled
+pixi run test            # all three
 ```
+
+A GTK library `pkg-config` cannot find is a conda-forge package missing from
+`pixi.toml`; `pixi run pkg-config --libs gtk+-3.0` names it.
 
 ## Never pipe a long task through `tail`
 
@@ -60,7 +63,7 @@ walks it into nimkit widgets, reconciling by key. The renderer knows the tag
 vocabulary and nothing else. If a feature needs a change on both sides, the
 boundary is in the wrong place.
 
-The C ABI in `nim/src/nirc_core.nim` still builds (`just build lib`) though
+The C ABI in `nim/src/nirc_core.nim` still builds (`pixi run build lib`) though
 nothing loads it. Every string it returns is the caller's to free with
 `nirc_free`.
 

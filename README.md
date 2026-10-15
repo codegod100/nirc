@@ -21,27 +21,35 @@ web/               the page, and the JavaScript that owns the WebSocket
 
 ## Running
 
+Everything comes from [pixi](https://pixi.sh): Nim, a C compiler, OpenSSL,
+GTK 3, pkg-config, Node.js and Python, all from conda-forge and pinned in
+`pixi.lock`. The host brings pixi and nothing else (on Linux it also needs an
+X11 or Wayland display to show the window).
+
 ```bash
-just run desktop     # build build/nirc and open the window
-just run web         # build build/web and serve it on :8000
-just test            # nim, web and desktop
-just test nim        # the core alone, in seconds
+curl -fsSL https://pixi.sh/install.sh | sh   # once
+
+pixi run desktop        # build build/nirc and open the window
+pixi run web            # build build/web and serve it on :8000
+pixi run test           # nim, web and desktop
+pixi run test nim       # the core alone, in seconds
+pixi run test nim tcommands   # one test file
+pixi run build lib      # the core as build/nim/libnirccore.so
 ```
 
-`tools/toolchain.sh` fetches Nim by sha256, and nothing else. The host brings
-`just`, a C compiler, OpenSSL, curl, tar and Python 3, plus GTK 3 and
-pkg-config for the desktop and Node.js for `just test web`.
+Linux (x86-64, arm64) and Intel macOS. conda-forge has no Nim for Apple
+silicon yet.
 
 A few switches for the desktop:
 
 ```bash
-NIRC_TRACE=1 just run desktop        # every line in and out
-NIRC_DEMO=1 just run desktop         # open on a representative room, no server
-NIRC_THEME=light just run desktop    # or dark; otherwise the desktop's own
+NIRC_TRACE=1 pixi run desktop        # every line in and out
+NIRC_DEMO=1 pixi run desktop         # open on a representative room, no server
+NIRC_THEME=light pixi run desktop    # or dark; otherwise the desktop's own
 
 # press Connect at startup, with the form filled from the environment
 NIRC_AUTOCONNECT=1 NIRC_HOST=irc.libera.chat NIRC_NICK=me \
-  NIRC_CHANNELS="#nim" just run desktop
+  NIRC_CHANNELS="#nim" pixi run desktop
 # NIRC_PORT=6667 NIRC_TLS=0 for a plain listener
 ```
 

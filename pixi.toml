@@ -1,0 +1,24 @@
+[workspace]
+name = "nirc"
+description = "A generic IRC client in Nim: GTK 3 on the desktop, DOM in a browser"
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64"]
+
+[dependencies]
+nim = ">=2.2,<2.3"
+c-compiler = "*"
+openssl = ">=3"
+gtk3 = ">=3.24"
+pkg-config = "*"
+zlib = "*"
+expat = "*"
+nodejs = ">=20"
+python = ">=3.10"
+
+# `pixi run <task> [args]`: the args go on the end of the command.
+[tasks]
+build = "bash tools/nirc.sh build"      # desktop | web | lib | core-js
+start = "bash tools/nirc.sh start"      # desktop | web
+test = "bash tools/nirc.sh test"        # all | nim [tests file stem] | web | desktop
+desktop = "bash tools/nirc.sh start desktop"
+web = "bash tools/nirc.sh start web"

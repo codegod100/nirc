@@ -8,9 +8,8 @@
 /nim/tests/t*
 !/nim/tests/t*.nim
 
-# The pinned Nim tarball `tools/toolchain.sh` fetches, unpacked.
-# Reproducible from the hash in that script.
-/.toolchain/
+# The pixi environment. Reproducible from pixi.lock.
+/.pixi/
 
 # Tool caches.
 /.cpcache/

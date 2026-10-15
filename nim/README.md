@@ -42,7 +42,7 @@ copy now, and the additions (pictures, wrapping rows, the caret, `reveal`,
 ## The ABI
 
 The app no longer goes through it: the desktop links the core directly and
-the page calls `globalThis.nirc`. It still builds, as `just build lib`, and
+the page calls `globalThis.nirc`. It still builds, as `pixi run build lib`, and
 `nirc_ui_demo` in it is what the desktop's `NIRC_DEMO=1` opens on.
 
 Strings in, strings out, and JSON where the answer is not a single string —
@@ -75,11 +75,11 @@ Two rules, both of which cost a segfault to rediscover:
   ClojureDart catalogue, which is gone; regenerating it now means going back to
   Unicode's `emoji-test.txt` and filtering to what the Twemoji pack draws.
 ```bash
-just test nim              # the whole suite
-just test nim tircparse    # one file
-just test web              # the JavaScript build, under node
-just test desktop          # the GTK app compiled: nimkit and the renderer agree
-just build lib             # libnirccore.so into build/nim
+pixi run test nim              # the whole suite
+pixi run test nim tircparse    # one file
+pixi run test web              # the JavaScript build, under node
+pixi run test desktop          # the GTK app compiled: nimkit and the renderer agree
+pixi run build lib             # libnirccore.so into build/nim
 ```
 
 ## What is not here

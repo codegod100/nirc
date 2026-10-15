@@ -4,7 +4,7 @@
 ## IRC connection; `nirckit/render` walks the core's tree into GTK widgets;
 ## and this file is the host — the window and the clock that polls the core.
 ##
-##   just run desktop
+##   pixi run desktop
 ##
 ##   NIRC_AUTOCONNECT=1  press Connect at startup; NIRC_NICK, NIRC_HOST,
 ##                       NIRC_PORT and NIRC_TLS=0 override the form

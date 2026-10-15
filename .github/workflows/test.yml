@@ -2,16 +2,12 @@ name: Test
 
 on:
   pull_request:
-    # ready_for_review as well: a draft is never merged, so marking one ready
-    # needs a run of its own for `merge.yml` to act on.
-    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
 
-# `test` is the check the ruleset on main requires, and the run `merge.yml`
-# waits for before it merges a pull request and deploys. It runs every suite:
-# the Nim core, the web build under node, and the desktop app compiled
-# against GTK's headers (no display; compiling is what that suite checks).
+# Every suite: the Nim core, the web build under node, and the desktop app
+# compiled against GTK (no display; compiling is what that suite checks).
+# pixi brings all of it from pixi.lock, the same as on a laptop.
 permissions:
   contents: read
 
@@ -21,24 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # tools/toolchain.sh holds the pins, so its hash is the cache key: a
-      # moved pin is a new toolchain, and anything else is the same bytes.
-      - name: Cache toolchain
-        uses: actions/cache@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          path: .toolchain
-          key: toolchain-${{ runner.os }}-${{ hashFiles('tools/toolchain.sh') }}
-
-      - uses: extractions/setup-just@v2
+          locked: true
+          cache: true
 
       - name: Nim core
-        run: just test nim
+        run: pixi run test nim
 
       - name: Web build
-        run: just test web
-
-      - name: GTK headers
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev
+        run: pixi run test web
 
       - name: Desktop build
-        run: just test desktop
+        run: pixi run test desktop

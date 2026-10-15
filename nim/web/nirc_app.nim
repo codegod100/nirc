@@ -7,7 +7,7 @@
 ## Flutter, reading the tree as JSON through `nirc.render`; it is now
 ## `nirckit/render` reading the tree itself, in the same script.
 ##
-##   just run web
+##   pixi run web
 ##
 ## Loaded at the end of `<body>`, before `nirc_host.js`: nimkit wants a body to
 ## put the root in, and the host wants `globalThis.nirc` the moment it runs.
