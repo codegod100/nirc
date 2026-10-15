@@ -1,0 +1,44 @@
+name: Test
+
+on:
+  pull_request:
+    # ready_for_review as well: a draft is never merged, so marking one ready
+    # needs a run of its own for `merge.yml` to act on.
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+# `test` is the check the ruleset on main requires, and the run `merge.yml`
+# waits for before it merges a pull request and deploys. It runs every suite:
+# the Nim core, the web build under node, and the desktop app compiled
+# against GTK's headers (no display; compiling is what that suite checks).
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # tools/toolchain.sh holds the pins, so its hash is the cache key: a
+      # moved pin is a new toolchain, and anything else is the same bytes.
+      - name: Cache toolchain
+        uses: actions/cache@v4
+        with:
+          path: .toolchain
+          key: toolchain-${{ runner.os }}-${{ hashFiles('tools/toolchain.sh') }}
+
+      - uses: extractions/setup-just@v2
+
+      - name: Nim core
+        run: just test nim
+
+      - name: Web build
+        run: just test web
+
+      - name: GTK headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev
+
+      - name: Desktop build
+        run: just test desktop

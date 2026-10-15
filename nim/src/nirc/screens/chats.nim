@@ -1,0 +1,103 @@
+## The conversation list.
+##
+## Transcribed from `common/nirc/screens/chats.cljc`. The terminal branches are
+## dropped rather than translated — there is no terminal frontend any more, so
+## `conversation-row`'s two layouts collapse to the one a window uses.
+
+import std/[json, sequtils, strutils]
+import nirc/[ui, cells, model, rooms, textruns]
+import nirc/screens/[frame, connect]
+
+const listGutter = 16
+  ## The scrollbar's room. Without it the cards sit under it and the last
+  ## character of a preview is behind the thumb.
+
+func previewLine*(text: string): string =
+  ## The last line of a conversation, as one line, cut to fit a card.
+  ##
+  ## 60 characters is the card's width; the truncating itself is
+  ## `textruns.summarise`, which the reply chip in the chat screen uses for
+  ## the same job.
+  summarise(text, 60)
+
+func conversationRow(r: Room): Node =
+  var badges = vbox(%*{"key": "badges"})
+  # A room we have not joined is one the reader can see but is not in — worth
+  # saying, because Open and Close both work on it either way.
+  let away = not dm(r.name) and not r.joined
+  if away or r.unread > 0:
+    var row = hbox(%*{"spacing": 12, "wrap": false})
+    if away:
+      row.children.add status("not joined", live = false)
+    if r.unread > 0:
+      row.children.add label((if r.mention: "◆ @ " else: "● ") & $r.unread)
+    badges.children.add row
+
+  n("vbox", %*{"key": r.name, "marginRight": listGutter}, @[
+    card(
+      title2(r.name),
+      badges,
+      dimLabel(previewLine(r.lastPreview)),
+      hbox(%*{"spacing": 8, "wrap": false},
+        button("Open", "room.open:" & r.name),
+        button("Close", "room.leave:" & r.name)))])
+
+func conversationListScreen(s: State, connected, direct: bool): Node =
+  ## The two kinds of conversation have their own tabs, but share the cards
+  ## and controls. A DM is identified by its name rather than by a second
+  ## collection in state, so it remains visible after reconnecting like rooms.
+  let buffers = channelList(s.rooms, s.search).filterIt(dm(it.name) == direct)
+  let section = if direct: "DMs" else: "Chats"
+
+  var head = vbox(%*{"key": "head", "spacing": 8, "marginRight": listGutter},
+    title(if connected: "Logged in as " & s.formNick else: section),
+    errorNote(s))
+
+  # Across every buffer, not just this tab's: "all" means the DMs too. In a
+  # wrapper of its own, so the button coming and going does not renumber the
+  # head for the renderer.
+  var markAll = vbox(%*{"key": "mark-all-read"})
+  if anyUnread(s.rooms):
+    markAll.children.add button("Mark all read", "rooms.mark-read")
+  head.children.add markAll
+
+  # `@nick` opens a DM and `#room` joins a channel, and the button says which
+  # so the reader is not guessing what Enter will do.
+  var joinRow = hbox(%*{"spacing": 8, "align": "end"},
+    button(if direct or s.joinInput.startsWith("@"): "Message" else: "Join", "join"),
+    entry("join-input", s.joinInput,
+          if direct: "@nick" else: "#channel or @nick", "join-input.change",
+          onSubmit = "join", verbatim = true))
+
+  var searchRow = hbox(%*{"spacing": 8, "align": "end"})
+  if s.search.len > 0:
+    searchRow.children.add button("✕", "search.clear")
+  searchRow.children.add entry("search", s.search,
+                               if direct: "Search direct messages" else: "Search channels",
+                               "search.change")
+
+  head.children.add card(vbox(%*{"spacing": 8}, joinRow, searchRow))
+
+  var body: Node
+  if buffers.len > 0:
+    body = vbox(%*{"spacing": 8})
+    for b in buffers:
+      body.children.add conversationRow(b)
+  else:
+    body = n("vbox", %*{"marginRight": listGutter}, @[
+      card(dimLabel(if direct: "No direct messages yet — message someone."
+                    else: "No conversations yet — join a channel."))])
+
+  vbox(%*{"spacing": 8, "margin": 12, "expand": true},
+    head,
+    vbox(%*{"key": "list", "expand": true},
+      scroll(%*{"scrollKey": "chats-list", "orientation": "vertical"}, body)),
+    vbox(%*{"key": "foot", "spacing": 8},
+      separator(),
+      tabBar(s)))
+
+func chatsScreen*(s: State, connected: bool): Node =
+  conversationListScreen(s, connected, direct = false)
+
+func dmsScreen*(s: State, connected: bool): Node =
+  conversationListScreen(s, connected, direct = true)

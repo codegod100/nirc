@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    The whole page. Nothing generates it and nothing rewrites it: `just
+    build web` copies this directory beside the compiled `nirc.js`, and that
+    is the bundle.
+  -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An IRC client">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="nirc">
+  <link rel="apple-touch-icon" href="icons/nirc-icon-192-v2.png">
+
+  <link rel="icon" type="image/png" href="nirc-favicon-v2.png"/>
+
+  <!-- The browser chrome around an installed window, matching the dark
+       palette's background in `nim/kit/nirckit/theme.nim`. -->
+  <meta name="theme-color" content="#202833">
+
+  <title>nirc</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!--
+    Installable, and ours rather than Flutter's.
+
+    A browser offers to install a page only when it has a service worker
+    with a fetch handler, so a PWA needs one -- and not an offline-first
+    one, which is what held deploys back while this page was Flutter's: a
+    new copy of it waited for every tab on the origin to close before it
+    took over.
+
+    `nirc_sw.js` is network-first and claims its clients immediately. See
+    that file for what it does and does not promise.
+
+    Registered after load, so it never competes with the app for the
+    connection on a first visit.
+  -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("nirc_sw.js")
+          .catch(function () { /* a page that will not install still runs */ });
+      });
+    }
+  </script>
+
+</head>
+<body>
+  <!--
+    The app, and the half of the web build that owns the I/O, at the end of
+    the body and none of them `async`. `nirc.js` is the core and its renderer,
+    compiled by `nim js`: it needs a body to put the window in, and it
+    defines `globalThis.nirc`, which `nirc_host.js` reaches for the moment it
+    runs.
+  -->
+  <script src="nirc.js"></script>
+  <script src="nirc_host.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Build output — build/nirc, build/web and build/nim. Nothing under web/ is
+# generated: `just build web` copies it into build/web and writes beside it.
+/build/
+
+# Nim's own object/cache tree, and the test binaries `nim c -r` leaves beside
+# the sources — one per tests/t*.nim, named without an extension.
+/nim/nimcache/
+/nim/tests/t*
+!/nim/tests/t*.nim
+
+# The pinned Nim tarball `tools/toolchain.sh` fetches, unpacked.
+# Reproducible from the hash in that script.
+/.toolchain/
+
+# Tool caches.
+/.cpcache/
+/.lsp/
+/.clj-kondo/
+
+# Python bytecode.
+__pycache__/
