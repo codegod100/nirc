@@ -294,6 +294,21 @@ suite "the chat screen's panes":
     check t.find("scroll").anyIt(
       it.props{"scrollKey"}.getStr() == "messages-#test")
 
+  test "a crowded room's people scroll rather than stretch the window":
+    # Joining #linux on Libera put a member list taller than any window in a
+    # plain column; GTK grew the window to 50,200 pixels to hold it, Wayland
+    # refused the surface, and nirc segfaulted.
+    for i in 0 ..< 2000: s.rooms["#test"].users["user" & $i] = ""
+    s.windowWidth = wideWidth
+    s.hideChatList = false
+    s.showUsers = true
+    let t = cht.chatScreen(s, true)
+    for key in ["people-list", "chat-list"]:
+      check t.find("scroll").anyIt(it.props{"key"}.getStr() == key)
+      check key notin t.keys("vbox")
+    check t.find("scroll").filterIt(it.props{"key"}.getStr() == "people-list")[0]
+      .children.len == 2002
+
   test "the way to DMs, Discover and Settings is on the screen":
     # It was not: the chat screen never carried the tab bar, and on a wide
     # window there is no back button either — the room list is a strip. So

@@ -445,21 +445,22 @@ proc chatScreen*(s: State, connected: bool): Node =
   # chats screen uses: a card carries a preview and two buttons and is a
   # screen's worth of width, where this is a strip down one side.
   #
-  # Neither strip scrolls, and that is a limit rather than a decision. A
-  # `scroll` becomes an `Expanded`, and a `vbox` is always `MainAxisSize.min`
-  # — which is the one combination Flutter will not lay out, and it came back
-  # as a semantics assertion rather than anything mentioning either. A room
-  # list or a member list longer than the window will run off the bottom
-  # until a vbox can be told to fill its parent.
+  # Both strips scroll, and that is not a nicety. A list that does not asks
+  # for its whole height, and on the desktop the window grants it: joining
+  # #linux on Libera asked GTK for a window 50,000 pixels tall, which Wayland
+  # could not make a surface for, and the app died. The panel `expand`s so
+  # the scroll has the height of the pane to fill rather than none.
   var chatListPane = vbox(%*{"key": "chat-list-pane"})
   if showChatList:
-    var panel = vbox(%*{"spacing": 4, "widthRequest": sidePanelWidth},
+    var panel = vbox(%*{"spacing": 4, "widthRequest": sidePanelWidth,
+                        "expand": true},
       title2("Chats"))
     var markAll = vbox(%*{"key": "mark-all-read"})
     if anyUnread(s.rooms):
       markAll.children.add button("Mark all read", "rooms.mark-read", "plain")
     panel.children.add markAll
-    var list = vbox(%*{"key": "chat-list", "spacing": 4})
+    var list = scroll(%*{"key": "chat-list", "scrollKey": "chat-list",
+                         "spacing": 4})
     for r in channelList(s.rooms, ""):
       let unread = if r.unread > 0: "  " & (if r.mention: "◆ " else: "● ") &
                                     $r.unread
@@ -473,9 +474,11 @@ proc chatScreen*(s: State, connected: bool): Node =
 
   var peoplePane = vbox(%*{"key": "people-pane"})
   if showUsers:
-    var panel = vbox(%*{"spacing": 4, "widthRequest": sidePanelWidth},
+    var panel = vbox(%*{"spacing": 4, "widthRequest": sidePanelWidth,
+                        "expand": true},
       title2("People"))
-    var list = vbox(%*{"key": "people-list", "spacing": 2})
+    var list = scroll(%*{"key": "people-list", "scrollKey": "people-list",
+                         "spacing": 2})
     # Ops first, then alphabetically, with the mode prefix in front of the
     # name — the order every other client lists them in.
     for m in memberList(room.users):
