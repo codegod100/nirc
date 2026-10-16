@@ -15,6 +15,14 @@ expat = "*"
 nodejs = ">=20"
 python = ">=3.10"
 
+# The Secret Service client the desktop keeps passwords through. Opened at run
+# time, not linked: a machine without it runs nirc and just does not remember.
+[target.linux-64.dependencies]
+libsecret = "*"
+
+[target.linux-aarch64.dependencies]
+libsecret = "*"
+
 # `pixi run <task> [args]`: the args go on the end of the command.
 [tasks]
 build = "bash tools/nirc.sh build"      # desktop | web | lib | core-js

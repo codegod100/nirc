@@ -84,7 +84,11 @@ The connect screen asks for:
 
 The server, port, TLS setting, nick, account name and channels are saved
 (`$XDG_CONFIG_HOME/nirc/server.json`; `localStorage` on the web). Passwords
-never are.
+never go in that file. On the desktop they go to the system keyring (the
+Secret Service through libsecret: GNOME Keyring, KWallet, KeePassXC) when
+**Remember passwords in the system keyring** is ticked, and come back on the
+form next run; unticking it forgets them at the next connect. The web build
+never remembers a password.
 
 **On the web**, a browser cannot open a raw TCP socket, so the server field
 takes a **WebSocket URL** (`wss://…`) — IRCv3's WebSocket transport, which
@@ -123,7 +127,8 @@ testnet, `wss://testnet.ergo.chat/webirc`. A bare host is tried as
 
 ## Limits
 
-* **No passwords are remembered**, so an account sign-in is typed each run.
+* **No passwords are remembered on the web**, nor on a desktop without a
+  Secret Service (macOS included).
 * **No SASL EXTERNAL / client certificates.**
 * **One server at a time.**
 * **No edits** (there is no ratified IRCv3 edit), **no uploads**, **no

@@ -66,7 +66,10 @@ func accountFields(s: State): Node =
     entry("server-password", s.formServerPassword, "only if the server needs one",
           "server-password.change", width = 320, verbatim = true,
           password = true, onSubmit = "connect"),
-    dimLabel("Passwords are never saved."))
+    if s.keyring:
+      checkbutton("Remember passwords in the system keyring",
+                  s.rememberPasswords, "remember-passwords.toggle")
+    else: dimLabel("Passwords are never saved."))
 
 func connectAction(s: State): Node =
   if s.connecting:

@@ -10,7 +10,9 @@ import std/[json, os, sequtils, strutils, tables, times, unittest]
 let sandbox = getTempDir() / "nirc-tstore-" & $epochTime()
 putEnv("XDG_CONFIG_HOME", sandbox)
 
-import nirc/[cells, clock, model, rooms, store, reducer]
+import nirc/[cells, clock, model, rooms, store, reducer, keyring]
+
+useMemory()
 
 proc clean() =
   removeDir(sandbox)
@@ -52,6 +54,54 @@ suite "a saved server":
     check not app.formTls
     check app.formNick == "bob"
     check app.formChannels == "#x"
+
+suite "passwords in the keyring":
+  setup:
+    clean()
+    useMemory()
+    app.keyring = true
+    app.formHost = "irc.example.org"
+    app.formPort = "6697"
+    app.formNick = "alice"
+    app.formAccount = "alice"
+    app.formSaslPassword = "hunter2"
+    app.formServerPassword = "letmein"
+  test "connecting keeps them, and restore puts them back":
+    dispatch(%*{"id": "connect"})
+    dispatch(%*{"id": "disconnect"})
+    check recall("sasl", "irc.example.org", "alice") == "hunter2"
+    check recall("server", "irc.example.org", "6697") == "letmein"
+    app = initState()
+    restore()
+    check app.keyring
+    check app.formSaslPassword == "hunter2"
+    check app.formServerPassword == "letmein"
+  test "an emptied field forgets its password":
+    dispatch(%*{"id": "connect"})
+    dispatch(%*{"id": "disconnect"})
+    app.formServerPassword = ""
+    dispatch(%*{"id": "connect"})
+    dispatch(%*{"id": "disconnect"})
+    check recall("server", "irc.example.org", "6697") == ""
+    check recall("sasl", "irc.example.org", "alice") == "hunter2"
+  test "unticking remember forgets them at the next connect, and stays off":
+    dispatch(%*{"id": "connect"})
+    dispatch(%*{"id": "disconnect"})
+    dispatch(%*{"id": "remember-passwords.toggle"})
+    check not app.rememberPasswords
+    dispatch(%*{"id": "connect"})
+    dispatch(%*{"id": "disconnect"})
+    check recall("sasl", "irc.example.org", "alice") == ""
+    check recall("server", "irc.example.org", "6697") == ""
+    app = initState()
+    restore()
+    check not app.rememberPasswords
+    check app.formSaslPassword == ""
+  test "a password belongs to its account and host":
+    dispatch(%*{"id": "connect"})
+    dispatch(%*{"id": "disconnect"})
+    check recall("sasl", "irc.example.org", "bob") == ""
+    check recall("sasl", "irc.other.net", "alice") == ""
 
 suite "the rooms file":
   setup: clean()

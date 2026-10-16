@@ -4,7 +4,8 @@
 ## not parse as absent: a room with a broken marker would count its whole
 ## history unread, which is worse than a room that starts over.
 ##
-## No password is ever written: not the server's, not SASL's.
+## No password is ever written here: not the server's, not SASL's. Those go
+## to the system keyring, through `nirc/keyring`, or nowhere.
 
 import std/[json, os, tables]
 import nirc/[model, trace]

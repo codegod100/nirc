@@ -56,9 +56,17 @@ type
     formHost*, formPort*, formNick*: string
     formTls*: bool
     formServerPassword*: string
-      ## `PASS`, for a bouncer or a private server. Never written to disk.
+      ## `PASS`, for a bouncer or a private server. Never written to disk;
+      ## kept in the system keyring where `rememberPasswords` says so.
     formAccount*, formSaslPassword*: string
-      ## SASL PLAIN. The account is remembered; the password is not.
+      ## SASL PLAIN. The account is saved with the server; the password goes
+      ## only to the keyring, like the server password.
+    keyring*: bool
+      ## Whether there is a system keyring to remember passwords in: on a
+      ## desktop with a Secret Service, never in a browser.
+    rememberPasswords*: bool
+      ## Whether connecting keeps the passwords in that keyring. Unticking it
+      ## forgets the ones kept for this server at the next connect.
     formChannels*: string
       ## Joined on connect, comma or space separated, beside whatever rooms
       ## an earlier run left open.
@@ -171,7 +179,7 @@ func initState*(): State =
         formTls: true,
         formNick: "nirc-guest", chanTypes: "#&",
         formChannels: when defined(js): "#chat" else: "",
-        atPresent: true,
+        atPresent: true, rememberPasswords: true,
         rooms: initOrderedTable[string, Room]())
 
 func wide*(s: State): bool =

@@ -21,12 +21,13 @@ src/nirc/emoji.nim       1,884 emoji — generated, see below
 src/nirc/glyphs.nim      a line split into words and pictures
 src/nirc/clock.nim       server time in the reader's own zone
 src/nirc/store.nim       what survives a restart
+src/nirc/keyring.nim     passwords, in the Secret Service through libsecret
 src/nirc/screens/        connect, chats, chat, discover, settings
 
 kit/nirckit/render.nim   the tag vocabulary, as nimkit widgets, keyed
 kit/nirckit/theme.nim    the palette, as a GTK CSS sheet and a web one
 kit/nirc_desktop.nim     the GTK host, built as ../build/nirc
-web/nirc/                the browser's conn and store, by search path
+web/nirc/                the browser's conn, store and keyring, by search path
 web/nirc_app.nim         the browser app: the seam, the renderer, nimkit's DOM
 web/nirc_web.nim         the seam alone (`globalThis.nirc`), for the node tests
 vendor/nimkit/          nimkit, vendored from nandi-conda/webby, with nirc's

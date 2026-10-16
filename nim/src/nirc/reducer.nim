@@ -10,6 +10,7 @@ import std/[algorithm, json, options, sequtils, strutils, tables]
 import std/sets
 import nirc/[cells, model, rooms, reactions, trace, ircparse, clock,
             handshake, textruns, members, store, complete, commands]
+import nirc/keyring
 import nirc/multiline as ml
 import nirc/conn as tr
 
@@ -105,11 +106,38 @@ proc restorePrefs() =
   app.hideJoinPart = prefs.getOrDefault("hideJoinPart", app.hideJoinPart)
   app.hideChatList = prefs.getOrDefault("hideChatList", app.hideChatList)
   app.hideUsers = prefs.getOrDefault("hideUsers", app.hideUsers)
+  app.rememberPasswords = prefs.getOrDefault("rememberPasswords",
+                                             app.rememberPasswords)
 
 proc rememberPrefs() =
   discard savePrefs({"hideJoinPart": app.hideJoinPart,
                      "hideChatList": app.hideChatList,
-                     "hideUsers": app.hideUsers}.toTable)
+                     "hideUsers": app.hideUsers,
+                     "rememberPasswords": app.rememberPasswords}.toTable)
+
+proc rememberPasswords() =
+  ## Into the keyring, or out of it: what the form held when the reader
+  ## connected becomes what the next run starts with. An emptied field
+  ## forgets, so a password taken off the form does not come back.
+  if not app.keyring: return
+  let host = app.formHost.strip()
+  let account = app.formAccount.strip()
+  let port = app.formPort.strip()
+  if account.len > 0:
+    if app.rememberPasswords and app.formSaslPassword.len > 0:
+      discard remember("sasl", host, account, app.formSaslPassword)
+    else: forget("sasl", host, account)
+  if app.rememberPasswords and app.formServerPassword.len > 0:
+    discard remember("server", host, port, app.formServerPassword)
+  else: forget("server", host, port)
+
+proc recallPasswords() =
+  if not app.keyring or not app.rememberPasswords: return
+  let host = app.formHost.strip()
+  let account = app.formAccount.strip()
+  if account.len > 0:
+    app.formSaslPassword = recall("sasl", host, account)
+  app.formServerPassword = recall("server", host, app.formPort.strip())
 
 proc rememberServer() =
   discard saveServer(SavedServer(host: app.formHost.strip(),
@@ -154,6 +182,7 @@ proc restore*() =
   ## what you were in, and how you like it. Any of them may be missing.
   restoreRooms()
   restorePrefs()
+  app.keyring = available()
   let (saved, had) = loadServer()
   if not had: return
   app.formHost = saved.host
@@ -162,6 +191,7 @@ proc restore*() =
   if saved.nick.len > 0: app.formNick = saved.nick
   app.formAccount = saved.account
   app.formChannels = saved.channels
+  recallPasswords()
   trace("store", "a saved server: " & saved.host)
 
 proc parsePort(): int =
@@ -197,6 +227,7 @@ proc connectNow() =
   creds = Credentials(account: app.formAccount.strip(),
                       password: app.formSaslPassword)
   rememberServer()
+  rememberPasswords()
   openSocket()
 
 proc reconnects(): bool =
@@ -422,6 +453,9 @@ proc apply(event: JsonNode) =
   of "account.change": app.formAccount = value
   of "sasl-password.change": app.formSaslPassword = value
   of "channels.change": app.formChannels = value
+  of "remember-passwords.toggle":
+    app.rememberPasswords = not app.rememberPasswords
+    rememberPrefs()
 
   of "tls.toggle":
     app.formTls = not app.formTls
