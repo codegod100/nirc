@@ -22,6 +22,7 @@ src/nirc/glyphs.nim      a line split into words and pictures
 src/nirc/clock.nim       server time in the reader's own zone
 src/nirc/store.nim       what survives a restart
 src/nirc/keyring.nim     passwords, in the Secret Service through libsecret
+src/nirc/history.nim     what was said, in SQLite under $XDG_DATA_HOME/nirc
 src/nirc/screens/        connect, chats, chat, discover, settings
 
 kit/nirckit/render.nim   the tag vocabulary, as nimkit widgets, keyed

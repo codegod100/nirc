@@ -9,6 +9,7 @@ import std/[json, os, sequtils, strutils, tables, times, unittest]
 
 let sandbox = getTempDir() / "nirc-tstore-" & $epochTime()
 putEnv("XDG_CONFIG_HOME", sandbox)
+putEnv("XDG_DATA_HOME", sandbox / "data")
 
 import nirc/[cells, clock, model, rooms, store, reducer, keyring]
 

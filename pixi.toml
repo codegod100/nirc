@@ -12,6 +12,7 @@ gtk3 = ">=3.24"
 pkg-config = "*"
 zlib = "*"
 expat = "*"
+libsqlite = ">=3"            # the history file
 nodejs = ">=20"
 python = ">=3.10"
 

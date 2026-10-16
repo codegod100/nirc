@@ -84,7 +84,9 @@ desktop takes `NIRC_THEME=dark|light`; the page follows
 ## Things the client deliberately does not do
 
 * Save a password to disk. The server, nick, account name and channels are
-  saved; the SASL and server passwords go only to the system keyring
-  (`nirc/keyring`, libsecret opened at run time), and only on the desktop.
+  saved (and, on the desktop, what was said, in
+  `$XDG_DATA_HOME/nirc/history.sqlite3`); the SASL and server passwords go
+  only to the system keyring (`nirc/keyring`, libsecret opened at run time),
+  and only on the desktop.
 * Edit messages (no ratified IRCv3 spec), upload files, or fetch avatars and
   link previews (those need a service beside the IRC server).

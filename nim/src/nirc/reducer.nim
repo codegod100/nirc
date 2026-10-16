@@ -13,6 +13,7 @@ import nirc/[cells, model, rooms, reactions, trace, ircparse, clock,
 import nirc/keyring
 import nirc/multiline as ml
 import nirc/conn as tr
+import nirc/history
 
 proc split2(id: string): (string, string) =
   ## `"room.open:#test"` → `("room.open", "#test")`. The argument may itself
@@ -147,6 +148,57 @@ proc rememberServer() =
                                  channels: app.formChannels.strip()))
 
 var
+  keptFor: string
+    ## The server whose kept history the buffers now hold, "" for none yet.
+  kept: HashSet[string]
+    ## The rooms, lowercased, whose kept history has been put back.
+
+proc serverKey(): string =
+  ## What the history file files a server under: its host, as typed.
+  app.formHost.strip().toLowerAscii
+
+proc placeByTime(r: var Room, m: Message) =
+  ## Into the buffer where its time says, not where it arrived. A history
+  ## replay may arrive after live traffic; keep the server's chronology.
+  var insertAt = r.messages.len
+  if m.at > 0:
+    for i in countdown(r.messages.high, 0):
+      if r.messages[i].at <= m.at:
+        insertAt = i + 1
+        break
+      insertAt = i
+  r.messages.insert(m, insertAt)
+
+proc hydrate(room: string) =
+  ## The room's kept history, put back the first time this run sees the room.
+  ## Before anything new is added to it, so the server's replay of the same
+  ## lines finds them already there.
+  if not history.enabled() or room.isStatus: return
+  let key = serverKey()
+  if key.len == 0: return
+  if key != keptFor:
+    keptFor = key
+    kept.clear()
+  let low = room.toLowerAscii
+  if low in kept: return
+  kept.incl low
+  app.rooms.ensureRoom(room)
+  var r = app.rooms[room]
+  for m0 in history.load(key, room):
+    if seenMessage(r.messages, m0.id, m0.frm, m0.text, app.formNick): continue
+    var m = m0
+    m.imageUrl = firstImageUrl(m.text)
+    r.placeByTime(m)
+  app.rooms[room] = r.recount(app.formNick)
+
+proc keepLine(room: string, m: Message) =
+  ## Write a line to the history file. Only what somebody said: joins and
+  ## parts are the room talking about itself, and a replay of them on the
+  ## next run would be a room full of people arriving.
+  if m.system or m.pending or room.isStatus: return
+  history.save(serverKey(), room, m)
+
+var
   multilines: ml.Assembler
     ## The `draft/multiline` batches this connection has open — see
     ## `nirc/multiline`.
@@ -179,10 +231,14 @@ proc rememberRooms(force = false) =
 
 proc restore*() =
   ## What a previous run left on disk, back in the state: where to connect,
-  ## what you were in, and how you like it. Any of them may be missing.
+  ## what you were in, what was said there, and how you like it. Any of them
+  ## may be missing.
   restoreRooms()
   restorePrefs()
   app.keyring = available()
+  discard history.open()
+  keptFor = ""
+  kept.clear()
   let (saved, had) = loadServer()
   if not had: return
   app.formHost = saved.host
@@ -193,6 +249,7 @@ proc restore*() =
   app.formChannels = saved.channels
   recallPasswords()
   trace("store", "a saved server: " & saved.host)
+  for name in toSeq(app.rooms.keys): hydrate(name)
 
 proc parsePort(): int =
   try: parseInt(app.formPort.strip())
@@ -249,6 +306,7 @@ proc echoLine(room, line: string, action = false, replyTo = "") =
   ## Our own line on screen now. Where `echo-message` was negotiated the
   ## server sends it back with its msgid and this copy adopts it; where it was
   ## not, this copy is the only one there will ever be.
+  hydrate(room)
   app.rooms.ensureRoom(room)
   var r = app.rooms[room]
   var m = Message(frm: app.formNick, text: line, at: nowMs(), action: action,
@@ -258,6 +316,7 @@ proc echoLine(room, line: string, action = false, replyTo = "") =
   m.replyTo = replyTo
   r.messages.add m
   app.rooms[room] = r.markRead
+  keepLine(room, m)
 
 proc localNote(room, line: string) =
   ## Something this client says to its reader, in the room they are looking
@@ -677,6 +736,7 @@ proc apply(event: JsonNode) =
 proc note(room: string, m: Message) =
   # A wire record with no words is not a chat line.
   if m.text.strip.len == 0: return
+  hydrate(room)
   app.rooms.ensureRoom(room)
   var r = app.rooms[room]
   # Before the duplicate check: a replay of lines we already hold is still a
@@ -685,16 +745,8 @@ proc note(room: string, m: Message) =
   if seenMessage(r.messages, m.id, m.frm, m.text, app.formNick):
     app.rooms[room] = r
     return
-  # A history replay may arrive after live traffic. Keep the server's
-  # chronology rather than the socket's arrival order.
-  var insertAt = r.messages.len
-  if m.at > 0:
-    for i in countdown(r.messages.high, 0):
-      if r.messages[i].at <= m.at:
-        insertAt = i + 1
-        break
-      insertAt = i
-  r.messages.insert(m, insertAt)
+  r.placeByTime(m)
+  keepLine(room, m)
   r.lastActivity = nowMs()
   app.rooms[room] = r.recount(app.formNick)
 
@@ -725,6 +777,15 @@ proc welcome() =
   app.status = "Connected as " & app.formNick &
                (if app.network.len > 0: " on " & app.network else: "")
   app.screen = scChats
+  if keptFor.len > 0 and keptFor != serverKey():
+    # The buffers hold another server's history: the form was changed since
+    # it was put back. That one's lines are not this one's.
+    for name in toSeq(app.rooms.keys):
+      if name.isStatus: continue
+      var r = app.rooms[name]
+      r.messages = @[]
+      app.rooms[name] = r
+  for name in toSeq(app.rooms.keys): hydrate(name)
   var asked: seq[string]
   for name, _ in app.rooms:
     if name.isChannel: asked.add name
@@ -895,6 +956,8 @@ proc drain*() =
                                     if p.hasAccount: p.account else: "")
           if adopted:
             app.rooms[room] = r
+            let i = r.indexById(msgid)
+            if i >= 0: keepLine(room, r.messages[i])
             continue
 
         var m = Message(id: msgid, frm: who, text: said, at: at,
@@ -940,6 +1003,7 @@ proc drain*() =
           var r = app.rooms[room]
           r.messages.keepItIf(not it.answersTo(p.params[1]))
           app.rooms[room] = r
+        history.drop(serverKey(), room, p.params[1])
 
     of "JOIN":
       if p.params.len >= 1:
