@@ -10,7 +10,7 @@ import nirc/screens/connect as cs
 import nirc/screens/settings as ss
 import nirc/screens/chat as cht
 import nirc/screens/chats as ch
-import nirc/[rooms]
+import nirc/[rooms, members]
 
 proc find*(node: Node, tag: string): seq[Node] =
   if node.isNil: return
@@ -306,8 +306,38 @@ suite "the chat screen's panes":
     for key in ["people-list", "chat-list"]:
       check t.find("scroll").anyIt(it.props{"key"}.getStr() == key)
       check key notin t.keys("vbox")
-    check t.find("scroll").filterIt(it.props{"key"}.getStr() == "people-list")[0]
-      .children.len == 2002
+
+  test "and only the stretch around the reader is built":
+    # A widget per member took a second to open #linux, and as long again to
+    # leave it.
+    for i in 0 ..< 2000: s.rooms["#test"].users["user" & $i] = ""
+    s.windowWidth = wideWidth
+    s.peopleBucket = 0
+    proc people(s: State): Node =
+      cht.chatScreen(s, true).find("scroll").filterIt(
+        it.props{"key"}.getStr() == "people-list")[0]
+    proc nicks(list: Node): seq[string] =
+      for row in list.children:
+        let k = row.props{"key"}.getStr()
+        if k.startsWith("member-"): result.add k["member-".len .. ^1]
+    proc space(list: Node): int =
+      for row in list.children:
+        if row.props{"key"}.getStr().startsWith("people-"):
+          result += row.props{"heightRequest"}.getInt()
+    let top = people(s)
+    check top.nicks.len == 3 * cht.peopleChunk  # nothing above the first
+    check top.nicks[0] == "alice"          # ops first, as ever
+    check top.props{"scrollBuckets"}.getInt() == (2002 + 39) div 40
+    check top.space == (2002 - top.nicks.len) * 22
+    s.peopleBucket = 30
+    let deep = people(s)
+    check deep.nicks.len == 4 * cht.peopleChunk
+    check deep.space == (2002 - deep.nicks.len) * 22
+    check deep.children[0].props{"heightRequest"}.getInt() == 29 * 40 * 22
+    # Past the end, as a stale bucket from a longer room would be: the last
+    # stretch, not nothing.
+    s.peopleBucket = 999
+    check people(s).nicks[^1] == memberList(s.rooms["#test"].users)[^1].nick
 
   test "the way to DMs, Discover and Settings is on the screen":
     # It was not: the chat screen never carried the tab bar, and on a wide

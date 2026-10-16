@@ -70,6 +70,7 @@ proc openRoom(name: string) =
   var r = app.rooms[name]
   r.accessed = nowMs()
   app.rooms[name] = r
+  if app.current != name: app.peopleBucket = 0
   app.current = name
   app.screen = scChat
   app.atPresent = true
@@ -518,6 +519,8 @@ proc apply(event: JsonNode) =
   # Where the reader is in the backlog, as the renderer sees it: a scroll
   # offset belongs to the thing doing the scrolling.
   of "present.left": app.atPresent = false
+  of "people.scroll":
+    app.peopleBucket = try: max(0, parseInt(arg)) except ValueError: 0
   of "present.back": app.atPresent = true
 
   of "window.size":

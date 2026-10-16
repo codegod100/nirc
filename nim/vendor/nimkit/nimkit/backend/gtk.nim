@@ -563,6 +563,9 @@ proc onAdjustmentChanged(adj: pointer, data: pointer) {.cdecl.} =
 proc onAdjustmentValue(adj: pointer, data: pointer) {.cdecl.} =
   let w = byId(data)
   if w == nil: return
+  if w.onScrolled != nil:
+    let room = gtk_adjustment_get_upper(adj) - gtk_adjustment_get_page_size(adj)
+    w.onScrolled(if room > 0: (gtk_adjustment_get_value(adj) / room).clamp(0.0, 1.0) else: 0.0)
   if w.followEnd and not atEnd(adj):
     w.setFollowSilently(false)
     if w.onFollow != nil: w.onFollow(false)

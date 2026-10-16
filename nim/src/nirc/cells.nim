@@ -97,6 +97,10 @@ type
       ## The people panel on a narrow window, where it is asked for.
     hideUsers*: bool
       ## The people panel on a wide one, where it is up unless folded away.
+    peopleBucket*: int
+      ## Which stretch of the people list the reader has scrolled to, in
+      ## `peopleChunk`s. Only the rows around it are built: a channel of
+      ## thousands as a widget per member took a second to open.
     hideChatList*: bool
     atPresent*: bool
     hideJoinPart*: bool

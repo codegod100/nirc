@@ -331,6 +331,9 @@ proc realize(w: Widget): JsObject =
     of wkScroll:
       let d = el("div", "nk-scroll")
       d.addEventListener("scroll", proc () =
+        if w.onScrolled != nil:
+          let room = d.scrollHeight.to(float) - d.clientHeight.to(float)
+          w.onScrolled(if room > 0: (d.scrollTop.to(float) / room).clamp(0.0, 1.0) else: 0.0)
         let atEnd = d.scrollTop.to(float) + d.clientHeight.to(float) >= d.scrollHeight.to(float) - 24
         if w.followEnd and not atEnd:
           w.setFollowSilently(false)

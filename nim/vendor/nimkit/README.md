@@ -18,6 +18,7 @@ What nirc added, so a later copy from upstream knows what to carry across:
 * `reveal`, which scrolls the nearest scroll until a widget is in view.
 * `onFollow` on a scroll that follows its end, told when the reader leaves
   the end and when they come back to it.
+* `onScrolled` on any scroll, told how far down it is (0 to 1) as it moves.
 * `onWindowSize`, the window's size whenever it changes.
 * On GTK, `resizeUp` after a child is added or removed. GTK caches whether a
   container trades height for width, and a container that answered "no"

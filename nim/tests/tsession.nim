@@ -185,6 +185,23 @@ suite "how big the window is":
     dispatch(%*{"id": "window.size", "value": "0x0"})
     check app.windowWidth == 1280
 
+suite "the people list's place":
+  setup: reset()
+
+  test "the renderer says which stretch the reader is at":
+    dispatch(%*{"id": "people.scroll:12"})
+    check app.peopleBucket == 12
+    dispatch(%*{"id": "people.scroll:banana"})
+    check app.peopleBucket == 0
+
+  test "and another room starts at its top":
+    dispatch(%*{"id": "room.open:#a"})
+    dispatch(%*{"id": "people.scroll:12"})
+    dispatch(%*{"id": "room.open:#a"})
+    check app.peopleBucket == 12
+    dispatch(%*{"id": "room.open:#b"})
+    check app.peopleBucket == 0
+
 suite "being renamed":
   setup: reset()
 

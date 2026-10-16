@@ -14,6 +14,11 @@ from nirc/screens/frame import tabBar
 const
   faceSize = 32
   memberFaceSize = 20
+  peopleRow = 22
+    ## Every row of the people list is this tall, so the rows not built can
+    ## be stood in for by space of the right height.
+  peopleChunk* = 40
+    ## The people list is built a chunk before the reader's and three after.
   pillSize = 20
   chipGap = 4
 
@@ -477,19 +482,33 @@ proc chatScreen*(s: State, connected: bool): Node =
     var panel = vbox(%*{"spacing": 4, "widthRequest": sidePanelWidth,
                         "expand": true},
       title2("People"))
-    var list = scroll(%*{"key": "people-list", "scrollKey": "people-list",
-                         "spacing": 2})
     # Ops first, then alphabetically, with the mode prefix in front of the
     # name — the order every other client lists them in.
-    for m in memberList(room.users):
+    let members = memberList(room.users)
+    # Only the stretch around the reader is built, with space standing in
+    # for the rest; see `peopleBucket`. Per room, so another room's list
+    # starts at its top rather than wherever this one was left.
+    let buckets = max(1, (members.len + peopleChunk - 1) div peopleChunk)
+    let bucket = min(s.peopleBucket, buckets - 1)
+    let first = max(0, (bucket - 1) * peopleChunk)
+    let last = min(members.len, (bucket + 3) * peopleChunk)
+    var list = scroll(%*{"key": "people-list",
+                         "scrollKey": "people-" & room.name, "spacing": 0,
+                         "onScroll": "people.scroll",
+                         "scrollBuckets": buckets, "scrollBucket": bucket})
+    list.children.add vbox(%*{"key": "people-above",
+                              "heightRequest": first * peopleRow})
+    for m in members[first ..< last]:
       # The same face and the same press the backlog gives them, so the list
       # is people rather than a column of names.
       let open = "profile.open:" & m.nick
       list.children.add hbox(%*{"key": "member-" & m.nick, "spacing": 6,
-                                "wrap": false},
+                                "wrap": false, "heightRequest": peopleRow},
         avatar("", m.nick, size = memberFaceSize, onClick = open),
         n("button", %*{"label": m.prefix & m.nick, "kind": "plain",
                        "onClick": open, "expand": true}))
+    list.children.add vbox(%*{"key": "people-below",
+                              "heightRequest": (members.len - last) * peopleRow})
     panel.children.add list
     peoplePane.children.add panel
 

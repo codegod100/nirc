@@ -96,6 +96,7 @@ type
     onFocusChange*: proc (focused: bool)    ## entries
     onLink*: proc (url: string): bool       ## rich labels: a link clicked; true: handled (else the platform opens it)
     onFollow*: proc (following: bool)       ## scroll views: the user scrolled away from the end, or back to it
+    onScrolled*: proc (fraction: float)     ## scroll views: moved; how far down, 0 at the top and 1 at the end
     onFrame*: proc (c: Canvas): tuple[data: pointer, width, height, stride: int]
       ## external canvases: asked for the buffer each time the canvas paints, for buffers that move (Ladybird's)
     # Canvas pixels

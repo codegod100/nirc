@@ -50,6 +50,7 @@ type
     rev: int               ## the revision an entry last took its text at
     tick: int              ## the `scrollToBottom` a scroll last acted on
     jumped: bool           ## `scrollHere` already acted on
+    bucket: int            ## the `onScroll` bucket a scroll last reported
     maxWidth: int          ## a page's widest
 
 var
@@ -416,7 +417,8 @@ proc container(m: Mount, n: Node, axis: char): Widget =
     m.box = column().spaced(p)
     if p.flag("background"): m.box.cls("ground")
     let w = p.num("widthRequest")
-    if w > 0: discard m.box.sized(w, 0)
+    let h = p.num("heightRequest")
+    if w > 0 or h > 0: discard m.box.sized(w, h)
     result = framed(m.box, p)
     if p.flag("expand"): result.expanded = true
   of "hbox":
@@ -435,6 +437,8 @@ proc container(m: Mount, n: Node, axis: char): Widget =
       if not c.isNil and (c.tag in ["separator", "entry"] or c.props.flag("expand")):
         wraps = false
     m.box = (if wraps: row().wrapping else: row()).spaced(p)
+    let h = p.num("heightRequest")
+    if h > 0: discard m.box.sized(0, h)
     result = framed(m.box, p)
     if p.flag("expand"): result.expanded = true
   of "page":
@@ -481,6 +485,20 @@ proc container(m: Mount, n: Node, axis: char): Widget =
         send(if following: "present.back" else: "present.left")
     elif p.flag("fromBottom"):
       result.followEnd = true
+    let onScroll = p.str("onScroll")
+    if onScroll.len > 0:
+      # Where the reader is, cut into `scrollBuckets` pieces and said only
+      # when it crosses into another: a long list renders the stretch around
+      # the reader, and needs to hear when that moves, not every pixel.
+      let mount = m
+      result.onScrolled = proc (fraction: float) =
+        let buckets = max(1, mount.props.num("scrollBuckets"))
+        let b = min(int(fraction * buckets.float), buckets - 1)
+        if b != mount.bucket:
+          mount.bucket = b
+          send(onScroll & ":" & $b)
+      # A scroll made fresh is at its top, whatever the tree last heard.
+      if p.num("scrollBucket") != 0: send(onScroll & ":0")
   of "overlay":
     # Things that float over the backlog sit under it here: nimkit has no
     # stack. The one that covers it — a picture being looked at — takes the
